@@ -1,5 +1,5 @@
 import pygame as pg
-from random import shuffle
+from random import choice
 pg.init()
 pg.font.init()
 
@@ -8,6 +8,7 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
 font = pg.font.SysFont("Consolas", WIDTH // 6)
+small_font = pg.font.SysFont("Consolas", WIDTH // 12)
 
 class Block:
     def __init__(self, number):
@@ -34,6 +35,7 @@ class Block:
                 self.y < mouse_y < self.y + self.width  
             
     def move(self, mouse_x, mouse_y, event, board):
+        global moves
         row = None
         column = None
         for i in range(len(board)):
@@ -47,23 +49,19 @@ class Block:
             #print(row, column)
             if row > 0 and board[row - 1][column].number == 9:
                 board[row][column].number, board[row - 1][column].number = board[row - 1][column].number, board[row][column].number
-                #board[row - 1][column].number = self.number
-                #print(board)
+                moves += 1
                 
             elif row < len(board) - 1 and board[row + 1][column].number == 9:
                 board[row][column].number, board[row + 1][column].number = board[row + 1][column].number, board[row][column].number
-                #board[row - 1][column].number = self.number
-                #print(board)
+                moves += 1
 
             elif column > 0 and board[row][column - 1].number == 9:
                 board[row][column].number, board[row][column - 1].number = board[row][column - 1].number, board[row][column].number
-                #board[row - 1][column].number = self.number
-                #print(board)
+                moves += 1
                 
             elif column < len(board) - 1 and board[row][column + 1].number == 9:
                 board[row][column].number, board[row][column + 1].number = board[row][column + 1].number, board[row][column].number
-                #board[row - 1][column].number = self.number
-                #print(board)
+                moves += 1
 
 
 window = pg.display.set_mode((WIDTH, HEIGHT))
@@ -73,8 +71,14 @@ board = []
 
 def init_board():
     global board
-    values = [x for x in range(1, 10)]
-    shuffle(values)
+    possible_values = [
+        [4, 8, 6, 2, 7, 3, 1, 5, 9],
+        [1, 8, 6, 7, 4, 5, 2, 3, 9],
+        [6, 7, 2, 3, 8, 5, 4, 1, 9],
+        [3, 7, 6, 2, 8, 4, 1, 5, 9],
+        [4, 6, 1, 8, 7, 5, 2, 3, 9]
+    ]
+    values = choice(possible_values)
 
     board = [
     [Block(values[0]), Block(values[1]), Block(values[2])],
@@ -105,27 +109,35 @@ def draw_board(win):
             for j in range(len(board[0])):
                 if board[i][j].number != 9:
                     board[i][j].draw(win)
-        
-        #init_board()
+
 
 def finish(window):
-    global gameWon, board
+    global gameWon, board, seconds, moves
     if gameWon:
-        print("pusi kurac")
         for i in range(len(board)):
             for j in range(len(board[0])):
                 board[i][j].draw(window)
         pg.display.update()
         pg.time.wait(1000)
+
+        msg = small_font.render(f"Seconds: {int(seconds)}",True, BLACK)
+        msg2 = small_font.render(f"Moves: {moves}", True, BLACK)
+        window.fill(WHITE)
+        window.blit(msg, (WIDTH // 2 - msg.get_width() // 2, HEIGHT // 2 - msg.get_height() // 2))
+        window.blit(msg2, (WIDTH // 2 - msg2.get_width() // 2, HEIGHT // 2 + msg.get_height() // 2))
+        pg.display.update()
+        pg.time.wait(2500)
+
         init_board()
         gameWon = False
+        seconds = 0
+        moves = 0
 
 def is_win(board):
     board_list = []
     for i in range(len(board)):
         for j in range(len(board[0])):
             board_list.append(board[i][j].number)
-    #print(board_list)
     return board_list == [x for x in range(1, 10)]
 
 def main(win):
@@ -136,14 +148,22 @@ def main(win):
 init_board()
 gameWon = False
 run = True
+clock = pg.time.Clock()
+FPS = 60
+seconds = 0
+moves = 0
 while run:
+    clock.tick(FPS)
     mouse_pos = pg.mouse.get_pos()
     mouse_pressed = pg.mouse.get_pressed(num_buttons = 3)
-    #print(mouse_pressed)
+    
+
     main(window)
     gameWon = is_win(board)
 
     finish(window)
+    if not gameWon:
+        seconds += 1 / FPS
 
     for event in pg.event.get():
         if event.type == pg.QUIT:
